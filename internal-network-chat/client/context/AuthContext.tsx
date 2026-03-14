@@ -14,6 +14,7 @@ type AuthContextType = {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  setDirectUserRole: (role: 'admin' | 'moderator' | 'user') => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('token', res.token);
       localStorage.setItem('user', JSON.stringify(res.user));
     }
+    return res.user;
   };
 
   const register = async (username: string, password: string) => {
@@ -49,6 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('token', res.token);
       localStorage.setItem('user', JSON.stringify(res.user));
     }
+    return res.user;
   };
 
   const logout = () => {
@@ -60,8 +63,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const setDirectUserRole = (role: 'admin' | 'moderator' | 'user') => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, role };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, setDirectUserRole }}>
       {children}
     </AuthContext.Provider>
   );

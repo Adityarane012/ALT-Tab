@@ -29,7 +29,16 @@ async function seed() {
       console.log('Admin user already exists');
     }
 
-    const roomNames = ['acm-general', 'acm-backend', 'acm-frontend', 'acm-announcements'];
+    const roomNames = [
+      'general',
+      'announcements',
+      'computer-engineering',
+      'ai-ds',
+      'it-engineering',
+      'extc-engineering',
+      'mechanical-engineering',
+      'civil-engineering'
+    ];
 
     for (const name of roomNames) {
       const existing = await Room.findOne({ name });

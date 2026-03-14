@@ -17,6 +17,11 @@
       "static/chunks/main.js",
       "static/chunks/pages/AdminPanel.js"
     ],
+    "/Dashboard": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/Dashboard.js"
+    ],
     "/Login": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -31,6 +36,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
+    ],
+    "/banned": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/banned.js"
     ]
   },
   "ampFirstPages": []

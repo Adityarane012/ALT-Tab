@@ -33,10 +33,15 @@ app.use(express.json());
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'MPSTME ACM Internal Network API' });
+  res.json({ status: 'ok', message: 'MPSTME Internal Network API' });
 });
 
 // REST routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);

@@ -64,19 +64,16 @@ function attachSocketHandlers(io, socket) {
 
     let reaction = message.reactions.find((r) => r.emoji === emoji);
     if (!reaction) {
-      reaction = { emoji, users: [] };
-      message.reactions.push(reaction);
-    }
-
-    const hasReacted = reaction.users.some(
-      (u) => String(u) === String(socket.user.id)
-    );
-    if (hasReacted) {
-      reaction.users = reaction.users.filter(
-        (u) => String(u) !== String(socket.user.id)
-      );
+      message.reactions.push({ emoji, users: [socket.user.id] });
     } else {
-      reaction.users.push(socket.user.id);
+      const hasReacted = reaction.users.some(
+        (u) => String(u) === String(socket.user.id)
+      );
+      if (hasReacted) {
+        reaction.users.pull(socket.user.id);
+      } else {
+        reaction.users.push(socket.user.id);
+      }
     }
 
     await message.save();

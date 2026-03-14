@@ -41,6 +41,15 @@ async function handleCommand({ io, socket, roomId, content }) {
   }
 
   await command.fn({ io, socket, roomId, args });
+
+  // Save the command to the database so it shows up in Activity Monitor
+  const Message = require('../models/Message');
+  await Message.create({
+    roomId,
+    senderId: socket.user.id,
+    content: `/${commandName} ${args.join(' ')}`.trim()
+  });
+
   return true;
 }
 

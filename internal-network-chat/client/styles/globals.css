@@ -2,15 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Google Font import ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Base ── */
 body {
-  @apply bg-acmDark text-slate-100 font-sans;
+  @apply bg-acmDark text-slate-100 font-sans antialiased;
 }
 
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.45);
+}
+
+/* ── Gradient border utility ── */
 .acm-gradient-border {
   background: linear-gradient(135deg, #0085CA, #6C63FF, #00B4A0);
 }
 
+/* ── Glass panel ── */
 .acm-panel {
-  @apply bg-acmDarkAlt/80 border border-slate-800/80 backdrop-blur-md rounded-xl;
+  @apply bg-acmSurface/80 border border-acmBorder/60 backdrop-blur-md rounded-2xl shadow-glass;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.acm-panel:hover {
+  border-color: rgba(26, 32, 53, 0.9);
 }
 
+/* ── Glass card (for admin) ── */
+.acm-card {
+  @apply bg-acmSurface/60 border border-acmBorder/50 backdrop-blur-sm rounded-xl shadow-glass;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.acm-card:hover {
+  @apply shadow-glass-lg;
+  transform: translateY(-1px);
+  border-color: rgba(26, 32, 53, 1);
+}
+
+/* ── Focus ring for inputs ── */
+.acm-input {
+  @apply w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-acmBorder text-sm outline-none transition-all duration-200;
+}
+.acm-input:focus {
+  @apply border-acmTeal/60 ring-1 ring-acmTeal/20 shadow-glow-teal;
+}
+.acm-input::placeholder {
+  @apply text-slate-500;
+}
+
+/* ── Button base ── */
+.acm-btn {
+  @apply px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer;
+}
+.acm-btn:active {
+  transform: scale(0.97);
+}
+.acm-btn-primary {
+  @apply acm-btn bg-gradient-to-r from-acmBlue via-acmPurple to-acmTeal text-white shadow-lg shadow-acmPurple/20;
+}
+.acm-btn-primary:hover {
+  @apply shadow-acmPurple/40;
+  filter: brightness(1.1);
+}
+.acm-btn-primary:disabled {
+  @apply opacity-40 cursor-not-allowed;
+  filter: none;
+}
+.acm-btn-ghost {
+  @apply acm-btn bg-slate-900/60 border border-acmBorder text-slate-300;
+}
+.acm-btn-ghost:hover {
+  @apply border-acmTeal/50 text-slate-100;
+}
+.acm-btn-danger {
+  @apply acm-btn bg-red-500/10 border border-red-500/30 text-red-400;
+}
+.acm-btn-danger:hover {
+  @apply bg-red-500/20 border-red-500/50 text-red-300;
+}
+
+/* ── Badge utility ── */
+.acm-badge {
+  @apply text-[10px] px-2.5 py-0.5 rounded-full border font-medium uppercase tracking-wider;
+}
+
+/* ── Typing dots animation ── */
+.typing-dot {
+  @apply w-1.5 h-1.5 rounded-full;
+  background: linear-gradient(135deg, #00B4A0, #0085CA);
+  animation: typingWave 1.2s infinite ease-in-out;
+  box-shadow: 0 0 6px rgba(0, 180, 160, 0.3);
+}
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typingWave {
+  0%, 60%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-5px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* ── Typing container slide ── */
+.typing-container {
+  animation: slideInTyping 0.25s ease-out forwards;
+}
+@keyframes slideInTyping {
+  0% { opacity: 0; transform: translateY(6px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Reaction animations ── */
+.reaction-pill {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reaction-pill:active {
+  transform: scale(0.85);
+}
+.reaction-pill.reaction-pop {
+  animation: reactionPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes reactionPop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.reaction-emoji-btn {
+  transition: all 0.15s ease-out;
+}
+.reaction-emoji-btn:hover {
+  transform: scale(1.3);
+}
+.reaction-emoji-btn:active {
+  transform: scale(0.9);
+}
+
+/* ── Sidebar overlay on mobile ── */
+.sidebar-overlay {
+  @apply fixed inset-0 bg-black/60 backdrop-blur-xs z-40;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* ── Message hover actions ── */
+.msg-actions {
+  @apply opacity-0 transition-opacity duration-150;
+}
+.msg-row:hover .msg-actions {
+  @apply opacity-100;
+}
+
+/* ── Scroll fade ── */
+.scroll-fade-bottom {
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}

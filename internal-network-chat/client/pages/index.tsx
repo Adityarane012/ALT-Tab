@@ -8,7 +8,11 @@ export default function IndexPage() {
 
   useEffect(() => {
     if (user) {
-      void router.replace('/Dashboard');
+      if (user.banned) {
+        void router.replace('/banned');
+      } else {
+        void router.replace('/Dashboard');
+      }
     } else {
       void router.replace('/Login');
     }

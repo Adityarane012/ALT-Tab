@@ -30,6 +30,13 @@ const userSchema = new mongoose.Schema({
   banned: {
     type: Boolean,
     default: false
+  },
+  bannedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  bannedAt: {
+    type: Date
   }
 }, { timestamps: true });
 

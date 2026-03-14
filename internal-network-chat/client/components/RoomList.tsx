@@ -1,3 +1,5 @@
+import clsx from 'clsx';
+
 type Room = {
   _id: string;
   name: string;
@@ -9,33 +11,104 @@ type RoomListProps = {
   onSelect: (room: Room) => void;
 };
 
+const ROOM_ICONS: Record<string, string> = {
+  general: '💬',
+  announcements: '📢',
+  computer: '💻',
+  'ai-ds': '🤖',
+  it: '🌐',
+  extc: '📡',
+  mechanical: '⚙️',
+  civil: '🏗️',
+  events: '📅',
+  projects: '🚀',
+  random: '🎲',
+};
+
+function getRoomIcon(name: string): string {
+  const lower = name.toLowerCase();
+  for (const [key, icon] of Object.entries(ROOM_ICONS)) {
+    if (lower.includes(key)) return icon;
+  }
+  return '#';
+}
+
 export const RoomList = ({ rooms, activeRoomId, onSelect }: RoomListProps) => {
   return (
     <div className="acm-panel h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-slate-500">
-            Rooms
+      {/* Header */}
+      <div className="px-4 py-3.5 border-b border-acmBorder/60">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-acmTeal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+              Channels
+            </span>
           </div>
-          <div className="text-sm text-slate-300">
-            MPSTME ACM
-          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-acmTeal/10 text-acmTeal border border-acmTeal/20 font-medium">
+            {rooms.length}
+          </span>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto py-2">
-        {rooms.map((room) => (
-          <button
-            key={room._id}
-            className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-900/60 transition ${
-              activeRoomId === room._id ? 'bg-slate-900/80 text-acmTeal' : 'text-slate-300'
-            }`}
-            onClick={() => onSelect(room)}
-          >
-            #{room.name}
-          </button>
-        ))}
+
+      {/* Room list */}
+      <div className="flex-1 overflow-y-auto py-1.5">
+        {rooms.map((room, i) => {
+          const isActive = activeRoomId === room._id;
+          const icon = getRoomIcon(room.name);
+          return (
+            <button
+              key={room._id}
+              className={clsx(
+                'w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-all duration-200 group relative animate-fade-in',
+                isActive
+                  ? 'bg-acmTeal/10 text-acmTeal border-l-2 border-acmTeal'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-l-2 border-transparent'
+              )}
+              style={{ animationDelay: `${i * 30}ms` }}
+              onClick={() => onSelect(room)}
+            >
+              <span className={clsx(
+                'text-sm transition-transform duration-200 group-hover:scale-110',
+                isActive && 'scale-110'
+              )}>
+                {icon === '#' ? (
+                  <span className={clsx(
+                    'font-bold text-base',
+                    isActive ? 'text-acmTeal' : 'text-slate-500 group-hover:text-slate-400'
+                  )}>#</span>
+                ) : (
+                  <span className="text-sm">{icon}</span>
+                )}
+              </span>
+              <span className={clsx(
+                'font-medium truncate',
+                isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-200'
+              )}>
+                {room.name}
+              </span>
+              {isActive && (
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-acmTeal animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+
+        {/* Empty state */}
+        {!rooms.length && (
+          <div className="flex flex-col items-center justify-center h-full px-4 py-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800/50 border border-acmBorder flex items-center justify-center mb-3">
+              <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </div>
+            <p className="text-xs text-slate-500">No channels yet</p>
+            <p className="text-[10px] text-slate-600 mt-0.5">Create one from Admin Panel</p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
