@@ -1,0 +1,17 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+
+.next/
+dist/
+build/
+
+.env
+.env.local
+.env.development
+.env.production
+
+logs
+*.log
+
+.DS_Store

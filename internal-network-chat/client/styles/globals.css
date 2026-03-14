@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-acmDark text-slate-100 font-sans;
+}
+
+.acm-gradient-border {
+  background: linear-gradient(135deg, #0085CA, #6C63FF, #00B4A0);
+}
+
+.acm-panel {
+  @apply bg-acmDarkAlt/80 border border-slate-800/80 backdrop-blur-md rounded-xl;
+}
+

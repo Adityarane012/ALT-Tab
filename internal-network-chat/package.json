@@ -1,0 +1,17 @@
+{
+  "name": "internal-network-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MPSTME ACM Internal Network — fullstack real-time organizational messaging platform.",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "seed": "npm run seed --prefix server",
+    "lint": "npm run lint --prefix server && npm run lint --prefix client",
+    "postinstall": "npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+
