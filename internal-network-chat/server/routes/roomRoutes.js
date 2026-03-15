@@ -10,9 +10,7 @@ router.get('/', getRooms);
 router.post('/', requireRole([ROLES.ADMIN, ROLES.MODERATOR]), createRoom);
 router.delete('/:roomId', requireRole(ROLES.ADMIN), deleteRoom);
 
-// Join requests
-router.post('/:roomId/request', requestJoin);
-router.post('/:roomId/approve', requireRole([ROLES.ADMIN, ROLES.MODERATOR]), approveJoin);
+// Join requests handled via socket.io
 
 module.exports = router;
 

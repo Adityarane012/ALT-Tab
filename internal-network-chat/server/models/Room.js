@@ -5,7 +5,8 @@ const roomSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
+    lowercase: true
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,19 +17,15 @@ const roomSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
-  pendingMembers: [{
+  pendingRequests: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
   isPrivate: {
     type: Boolean,
-    default: true // Default all new rooms to be private
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    default: false
   }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Room', roomSchema);
 

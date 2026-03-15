@@ -93,6 +93,82 @@ function attachSocketHandlers(io, socket) {
     });
   });
 
+  // Microsoft Teams Channel Requests
+  socket.on('requestJoinChannel', async ({ roomId }) => {
+    if (!roomId) return;
+    const room = await Room.findById(roomId);
+    if (!room) return;
+
+    if (room.members.includes(socket.user.id)) return; // Already in
+
+    if (!room.pendingRequests.includes(socket.user.id)) {
+      room.pendingRequests.push(socket.user.id);
+      await room.save();
+      
+      // Notify active admins and moderators
+      io.sockets.sockets.forEach((s) => {
+        if (s.user && ['admin', 'moderator'].includes(s.user.role)) {
+          s.emit('newJoinRequest', { 
+            roomId, 
+            user: { _id: socket.user.id, username: socket.user.username } 
+          });
+        }
+      });
+    }
+  });
+
+  socket.on('approveJoinRequest', async ({ roomId, userId }) => {
+    if (!['admin', 'moderator'].includes(socket.user.role)) return; // Auth check!
+    
+    const room = await Room.findById(roomId);
+    if (!room || !userId) return;
+
+    if (room.pendingRequests.includes(userId)) {
+      room.pendingRequests.pull(userId);
+      room.members.push(userId);
+      await room.save();
+
+      // Find the specific user's socket to grant them explicit entry
+      io.sockets.sockets.forEach((s) => {
+        if (s.user && String(s.user.id) === String(userId)) {
+          s.emit('joinApproved', { roomId });
+          s.emit('systemMessage', { roomId, content: 'Your join request was approved!' });
+        }
+      });
+
+      // Notify the admins that the request banner can disappear
+      io.sockets.sockets.forEach((s) => {
+        if (s.user && ['admin', 'moderator'].includes(s.user.role)) {
+          s.emit('joinRequestHandled', { roomId, userId });
+        }
+      });
+    }
+  });
+
+  socket.on('rejectJoinRequest', async ({ roomId, userId }) => {
+    if (!['admin', 'moderator'].includes(socket.user.role)) return;
+
+    const room = await Room.findById(roomId);
+    if (!room || !userId) return;
+
+    if (room.pendingRequests.includes(userId)) {
+      room.pendingRequests.pull(userId);
+      await room.save();
+
+      io.sockets.sockets.forEach((s) => {
+        if (s.user && String(s.user.id) === String(userId)) {
+          s.emit('joinRejected', { roomId });
+        }
+      });
+
+      io.sockets.sockets.forEach((s) => {
+        if (s.user && ['admin', 'moderator'].includes(s.user.role)) {
+          s.emit('joinRequestHandled', { roomId, userId });
+        }
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     // Optional: broadcast disconnect info
   });
