@@ -47,20 +47,6 @@ A real-time collaboration platform purpose-built for technical communities. Dark
 
 ---
 
-## ☁️ Deployment (Split Strategy)
-
-### 1. Backend (Render / Railway)
-- **Repo**: `internal-network-chat/server`
-- **Build**: `npm install`
-- **Start**: `npm start`
-- **Env**: Set `MONGO_URI`, `JWT_SECRET`, and `CLIENT_ORIGIN` (to your frontend URL).
-
-### 2. Frontend (Vercel)
-- **Root Directory**: `internal-network-chat/client`
-- **Env**: Set `NEXT_PUBLIC_API_URL` to your live Backend URL.
-
----
-
 ## 🛡️ Moderation Commands
 - `/kick username` - Remove user from current room.
 - `/ban username` - Global permanent ban.
@@ -68,6 +54,3 @@ A real-time collaboration platform purpose-built for technical communities. Dark
 - `/clear` - Wipe current room's history.
 - `/warn username` - Issues a formal warning.
 
----
-
-Built with ❤️ by **MPSTME ACM**
