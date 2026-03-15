@@ -1,0 +1,13 @@
+{
+  "extends": "standard",
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "rules": {
+    "space-before-function-paren": "off"
+  }
+}

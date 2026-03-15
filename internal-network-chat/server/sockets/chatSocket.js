@@ -144,7 +144,8 @@ function attachSocketHandlers(io, socket) {
     const room = await Room.findById(roomId);
     if (!room || !userId) return;
 
-    if (room.pendingRequests.includes(userId)) {
+    const hasRequest = room.pendingRequests.some(id => String(id) === String(userId));
+    if (hasRequest) {
       room.pendingRequests.pull(userId);
       room.members.push(userId);
       await room.save();
@@ -172,7 +173,8 @@ function attachSocketHandlers(io, socket) {
     const room = await Room.findById(roomId);
     if (!room || !userId) return;
 
-    if (room.pendingRequests.includes(userId)) {
+    const hasRequest = room.pendingRequests.some(id => String(id) === String(userId));
+    if (hasRequest) {
       room.pendingRequests.pull(userId);
       await room.save();
 
