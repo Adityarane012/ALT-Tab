@@ -3,7 +3,28 @@ const Room = require('../models/Room');
 const { User } = require('../models/User');
 const { handleCommand } = require('../utils/commandParser');
 
+function broadcastOnlineUsers(io) {
+  const onlineUsers = [];
+  const seenUserIds = new Set();
+
+  io.sockets.sockets.forEach((s) => {
+    if (s.user && !seenUserIds.has(s.user.id)) {
+      seenUserIds.add(s.user.id);
+      onlineUsers.push({
+        id: s.user.id,
+        username: s.user.username,
+        role: s.user.role
+      });
+    }
+  });
+
+  io.emit('onlineUsersUpdate', onlineUsers);
+}
+
 function attachSocketHandlers(io, socket) {
+  // Initial broadcast on connect
+  broadcastOnlineUsers(io);
+
   socket.on('joinRoom', async ({ roomId }) => {
     socket.join(roomId);
     await Room.findByIdAndUpdate(roomId, { $addToSet: { members: socket.user.id } });
@@ -158,6 +179,7 @@ function attachSocketHandlers(io, socket) {
       io.sockets.sockets.forEach((s) => {
         if (s.user && String(s.user.id) === String(userId)) {
           s.emit('joinRejected', { roomId });
+          s.emit('systemMessage', { roomId, content: 'Your join request was rejected.' });
         }
       });
 
@@ -170,7 +192,7 @@ function attachSocketHandlers(io, socket) {
   });
 
   socket.on('disconnect', () => {
-    // Optional: broadcast disconnect info
+    broadcastOnlineUsers(io);
   });
 }
 

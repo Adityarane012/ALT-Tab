@@ -23,7 +23,7 @@ const roomSchema = new mongoose.Schema({
   }],
   isPrivate: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, { timestamps: true });
 

@@ -4,7 +4,7 @@ type Room = {
   _id: string;
   name: string;
   members: string[];
-  pendingMembers: string[];
+  pendingRequests: any[];
   isPrivate: boolean;
 };
 
@@ -12,7 +12,8 @@ type RoomListProps = {
   rooms: Room[];
   activeRoomId: string | null;
   onSelect: (room: Room) => void;
-  currentUserId: string; // Needed to check membership
+  currentUserId: string;
+  currentUserRole: string; // Needed for admin bypass and badge visibility
 };
 
 const ROOM_ICONS: Record<string, string> = {
@@ -37,7 +38,9 @@ function getRoomIcon(name: string): string {
   return '#';
 }
 
-export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId }: RoomListProps) => {
+export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId, currentUserRole }: RoomListProps) => {
+  const isAdminOrMod = ['admin', 'moderator'].includes(currentUserRole);
+
   return (
     <div className="acm-panel h-full flex flex-col">
       {/* Header */}
@@ -63,7 +66,9 @@ export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId }: RoomL
           const isActive = activeRoomId === room._id;
           const icon = getRoomIcon(room.name);
           const isMember = room.members?.includes(currentUserId);
-          const isLocked = room.isPrivate && !isMember;
+          // Admins and Moderators automatically have access
+          const isLocked = room.isPrivate && !isMember && !isAdminOrMod;
+          const pendingCount = room.pendingRequests?.length || 0;
 
           return (
             <button
@@ -73,7 +78,7 @@ export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId }: RoomL
                 isActive
                   ? 'bg-acmTeal/10 text-acmTeal border-l-2 border-acmTeal'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-l-2 border-transparent',
-                isLocked && !isActive && 'opacity-60 hover:opacity-100' // visually dim locked rooms
+                isLocked && !isActive && 'opacity-60 hover:opacity-100'
               )}
               style={{ animationDelay: `${i * 30}ms` }}
               onClick={() => onSelect(room)}
@@ -92,11 +97,18 @@ export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId }: RoomL
                 )}
               </span>
               <span className={clsx(
-                'font-medium truncate',
+                'font-medium truncate flex-1',
                 isActive ? 'text-slate-100' : 'text-slate-400 group-hover:text-slate-200'
               )}>
                 {room.name}
               </span>
+
+              {/* Pending Request Indicator for Admins/Mods */}
+              {isAdminOrMod && pendingCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-acmPurple text-white font-bold animate-pulse">
+                  ({pendingCount})
+                </span>
+              )}
               
               {/* Lock Icon for private unjoined rooms */}
               {isLocked && (

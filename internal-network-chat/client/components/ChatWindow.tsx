@@ -11,7 +11,7 @@ type RoomType = {
   _id: string;
   name: string;
   members?: string[];
-  pendingMembers?: string[];
+  pendingRequests?: any[]; // Populated with { _id, username }
   isPrivate?: boolean;
 };
 
@@ -35,8 +35,9 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Check Membership
-  const isMember = room && currentUser && room.members?.includes(currentUser.id);
-  const isPending = room && currentUser && room.pendingMembers?.includes(currentUser.id);
+  const isAdminOrMod = currentUser && ['admin', 'moderator'].includes(currentUser.role);
+  const isMember = room && currentUser && (room.members?.includes(currentUser.id) || isAdminOrMod);
+  const isPending = room && currentUser && (room.pendingRequests?.some((u: any) => (u._id || u) === currentUser.id));
   const isLockedOut = room?.isPrivate && !isMember;
 
   const scrollToBottom = (smooth = true) => {
@@ -158,8 +159,14 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     };
     const onJoinApproved = (payload: any) => {
       if (payload.roomId === room?._id) {
-         // Auto-reload the UI window to drop the gate
-         window.location.reload();
+         // Drop the gate locally
+         setWarningMsg('Your join request was approved!');
+      }
+    };
+    const onJoinRejected = (payload: any) => {
+      if (payload.roomId === room?._id) {
+         setWarningMsg('Your join request was rejected by a moderator.');
+         setJoinRequested(false);
       }
     };
 
@@ -176,6 +183,7 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     socket.on('kickedFromRoom', onKicked);
     socket.on('userWarned', onWarned);
     socket.on('joinApproved', onJoinApproved);
+    socket.on('joinRejected', onJoinRejected);
 
     return () => {
       socket.emit('leaveRoom', { roomId: room._id });
@@ -192,6 +200,7 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
       socket.off('kickedFromRoom', onKicked);
       socket.off('userWarned', onWarned);
       socket.off('joinApproved', onJoinApproved);
+      socket.off('joinRejected', onJoinRejected);
     };
   }, [room?._id, socket, token, currentUser, router, isLockedOut]);
 
@@ -218,24 +227,20 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     socket.emit('reaction', { messageId, emoji, roomId: room._id });
   };
 
-  const handleRequestJoin = async () => {
-    if (!room || !token) return;
-    try {
-      await requestJoinRoom(token, room._id);
-      setJoinRequested(true);
-    } catch (err: any) {
-      setBanErrorMsg(err.response?.data?.message || 'Failed to request join');
-    }
+  const handleRequestJoin = () => {
+    if (!room || !socket) return;
+    socket.emit('requestJoinChannel', { roomId: room._id });
+    setJoinRequested(true);
   };
 
-  const handleApproveJoin = async (targetId: string) => {
-    if (!room || !token) return;
-    try {
-      await approveJoinRoom(token, room._id, targetId);
-      setWarningMsg('User approved for entry.'); // use warning UI as success for now
-    } catch (err: any) {
-      setBanErrorMsg(err.response?.data?.message || 'Failed to approve');
-    }
+  const handleApproveJoin = (targetId: string) => {
+    if (!room || !socket) return;
+    socket.emit('approveJoinRequest', { roomId: room._id, userId: targetId });
+  };
+
+  const handleRejectJoin = (targetId: string) => {
+    if (!room || !socket) return;
+    socket.emit('rejectJoinRequest', { roomId: room._id, userId: targetId });
   };
 
   // No room selected state
@@ -297,7 +302,7 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
           setBanErrorMsg('');
           setWarningMsg('');
         }} 
-        title={warningMsg ? 'Warning' : 'Action Failed'} 
+        title={warningMsg ? 'Notice' : 'Action Failed'} 
         message={banErrorMsg || warningMsg} 
       />
       
@@ -323,26 +328,57 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
         </div>
       </div>
 
-      {/* Admin Panel: Pending Members */}
-      {currentUser && ['admin', 'moderator'].includes(currentUser.role) && room.pendingMembers && room.pendingMembers.length > 0 && (
-         <div className="bg-acmPurple/10 border-b border-acmPurple/30 px-5 py-2.5 flex items-center justify-between animate-fade-in shadow-inner">
-            <div className="flex items-center gap-2">
-               <span className="w-4 h-4 rounded bg-acmPurple/20 text-acmPurple flex items-center justify-center text-[10px] font-bold">
-                  !
+      {/* Admin Panel: Redesigned Pending Requests */}
+      {isAdminOrMod && room.pendingRequests && room.pendingRequests.length > 0 && (
+         <div className="bg-slate-900/80 border-b border-acmPurple/30 px-5 py-4 animate-fade-in shadow-2xl backdrop-blur-xl z-20">
+            <div className="flex items-center justify-between mb-3">
+               <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-acmPurple/20 text-acmPurple flex items-center justify-center text-xs font-black ring-1 ring-acmPurple/30 animate-pulse">
+                     !
+                  </div>
+                  <span className="text-xs text-slate-100 font-bold uppercase tracking-wider">Pending Join Requests</span>
+               </div>
+               <span className="text-[10px] bg-acmPurple/20 text-acmPurple px-2 py-0.5 rounded-full font-bold border border-acmPurple/30">
+                  {room.pendingRequests.length} QUEUED
                </span>
-               <span className="text-xs text-slate-200 font-medium">Pending Join Requests ({room.pendingMembers.length})</span>
             </div>
             
-            <div className="flex items-center gap-2 max-w-[50%] overflow-x-auto">
-               {room.pendingMembers.map((id) => (
-                  <button
-                     key={id}
-                     onClick={() => handleApproveJoin(id)}
-                     className="text-[10px] bg-slate-800 border border-acmPurple/40 text-slate-300 px-2 py-1 rounded truncate hover:bg-acmPurple/20 hover:text-white transition-all max-w-[100px]"
-                     title={`Approve ${id}`}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 overflow-y-auto max-h-[120px] pr-2 custom-scrollbar">
+               {room.pendingRequests.map((pendingUser: any) => (
+                  <div 
+                    key={pendingUser._id || pendingUser} 
+                    className="group bg-slate-800/40 border border-acmBorder/50 rounded-xl p-2.5 flex items-center justify-between hover:border-acmPurple/40 hover:bg-slate-800/60 transition-all duration-300"
                   >
-                     Approve {id.slice(-4)}
-                  </button>
+                     <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 border border-acmBorder flex items-center justify-center text-[10px] font-bold text-slate-300">
+                           {pendingUser.username?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <span className="text-xs text-slate-200 font-medium truncate">
+                           {pendingUser.username || 'User'}
+                        </span>
+                     </div>
+                     
+                     <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                           onClick={() => handleApproveJoin(pendingUser._id || pendingUser)}
+                           className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center"
+                           title="Approve"
+                        >
+                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                           </svg>
+                        </button>
+                        <button
+                           onClick={() => handleRejectJoin(pendingUser._id || pendingUser)}
+                           className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                           title="Reject"
+                        >
+                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                           </svg>
+                        </button>
+                     </div>
+                  </div>
                ))}
             </div>
          </div>

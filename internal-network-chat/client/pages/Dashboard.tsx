@@ -5,13 +5,16 @@ import { RoomList } from '../components/RoomList';
 import { ChatWindow } from '../components/ChatWindow';
 import { UserList } from '../components/UserList';
 import { fetchRooms } from '../services/api';
+import { useSocket } from '../context/SocketContext';
 
 export default function DashboardPage() {
   const { user, token, logout } = useAuth();
+  const { socket } = useSocket();
   const router = useRouter();
   const [rooms, setRooms] = useState<any[]>([]);
   const [activeRoom, setActiveRoom] = useState<any | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<{ id: string; username: string; role: string }[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -33,13 +36,67 @@ export default function DashboardPage() {
     void loadRooms();
   }, [token, activeRoom]);
 
+  // Real-time synchronization for Join Requests, Membership changes, and Online Users
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const onOnlineUsersUpdate = (users: any[]) => {
+      setOnlineUsers(users);
+    };
+
+    const onNewJoinRequest = (payload: { roomId: string, user: { _id: string, username: string } }) => {
+      setRooms(prev => prev.map(r => 
+        r._id === payload.roomId 
+          ? { ...r, pendingRequests: [...(r.pendingRequests || []), payload.user] }
+          : r
+      ));
+      // Also update activeRoom if it's the one receiving a request
+      setActiveRoom(prev => prev?._id === payload.roomId 
+        ? { ...prev, pendingRequests: [...(prev.pendingRequests || []), payload.user] }
+        : prev
+      );
+    };
+
+    const onJoinRequestHandled = (payload: { roomId: string, userId: string }) => {
+      const filterPending = (r: any) => ({
+        ...r,
+        pendingRequests: (r.pendingRequests || []).filter((u: any) => (u._id || u) !== payload.userId)
+      });
+
+      setRooms(prev => prev.map(r => r._id === payload.roomId ? filterPending(r) : r));
+      setActiveRoom(prev => prev?._id === payload.roomId ? filterPending(prev) : prev);
+    };
+
+    const onJoinApproved = (payload: { roomId: string }) => {
+      const reload = async () => {
+        if (!token) return;
+        const data = await fetchRooms(token);
+        setRooms(data);
+        // Find and update the active room with fresh data (membership, etc)
+        const updatedActive = data.find(r => r._id === payload.roomId);
+        if (updatedActive && activeRoom?._id === payload.roomId) {
+          setActiveRoom(updatedActive);
+        }
+      };
+      reload();
+    };
+
+    socket.on('onlineUsersUpdate', onOnlineUsersUpdate);
+    socket.on('newJoinRequest', onNewJoinRequest);
+    socket.on('joinRequestHandled', onJoinRequestHandled);
+    socket.on('joinApproved', onJoinApproved);
+
+    return () => {
+      socket.off('onlineUsersUpdate', onOnlineUsersUpdate);
+      socket.off('newJoinRequest', onNewJoinRequest);
+      socket.off('joinRequestHandled', onJoinRequestHandled);
+      socket.off('joinApproved', onJoinApproved);
+    };
+  }, [socket, user, token, activeRoom]);
+
   if (!user) {
     return null;
   }
-
-  const mockUsers = [
-    { id: user.id, username: user.username, role: user.role }
-  ];
 
   const handleSelectRoom = (room: any) => {
     setActiveRoom(room);
@@ -144,6 +201,7 @@ export default function DashboardPage() {
             activeRoomId={activeRoom?._id || null}
             onSelect={handleSelectRoom}
             currentUserId={user.id}
+            currentUserRole={user.role}
           />
         </div>
 
@@ -154,7 +212,7 @@ export default function DashboardPage() {
 
         {/* User list (hidden on small screens) */}
         <div className="hidden xl:block w-64 p-2 flex-shrink-0">
-          <UserList users={mockUsers} />
+          <UserList users={onlineUsers} />
         </div>
       </main>
 
