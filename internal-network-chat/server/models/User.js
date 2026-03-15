@@ -35,9 +35,47 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  bannedByRole: {
+    type: String,
+    enum: Object.values(ROLES)
+  },
   bannedAt: {
     type: Date
-  }
+  },
+  muted: {
+    type: Boolean,
+    default: false
+  },
+  mutedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  mutedByRole: {
+    type: String,
+    enum: Object.values(ROLES)
+  },
+  mutedAt: {
+    type: Date
+  },
+  warnings: [{
+    message: String,
+    issuedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    issuedByRole: {
+      type: String,
+      enum: Object.values(ROLES)
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  kickedFromRooms: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Room'
+  }]
 }, { timestamps: true });
 
 userSchema.pre('save', async function preSave(next) {

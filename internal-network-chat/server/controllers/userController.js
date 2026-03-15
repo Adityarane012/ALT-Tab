@@ -54,10 +54,16 @@ async function toggleUserBan(req, res) {
     if (requesterRole === ROLES.MODERATOR && target.role !== ROLES.USER) {
       return res.status(403).json({ message: 'Moderators can only ban standard users.' });
     }
+  } else {
+    // Enforce unban hierarchy
+    if (requesterRole === ROLES.MODERATOR && target.bannedByRole === ROLES.ADMIN) {
+      return res.status(403).json({ message: 'You do not have permission to unban a user banned by an Administrator.' });
+    }
   }
 
   target.banned = Boolean(banned);
   target.bannedBy = banned ? req.user._id : undefined;
+  target.bannedByRole = banned ? req.user.role : undefined;
   target.bannedAt = banned ? new Date() : undefined;
   
   await target.save();

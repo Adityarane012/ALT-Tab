@@ -143,6 +143,7 @@ export default function DashboardPage() {
             rooms={rooms}
             activeRoomId={activeRoom?._id || null}
             onSelect={handleSelectRoom}
+            currentUserId={user.id}
           />
         </div>
 

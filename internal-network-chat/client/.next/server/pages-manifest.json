@@ -1,9 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/Dashboard": "pages/Dashboard.js",
-  "/Login": "pages/Login.js",
-  "/AdminPanel": "pages/AdminPanel.js",
-  "/banned": "pages/banned.js"
-}
+{"/AdminPanel":"pages/AdminPanel.html","/_app":"pages/_app.js","/banned":"pages/banned.html","/Dashboard":"pages/Dashboard.html","/Login":"pages/Login.html","/":"pages/index.html","/_error":"pages/_error.js","/_document":"pages/_document.js","/404":"pages/404.html"}

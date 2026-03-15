@@ -2,9 +2,15 @@ const Message = require('../models/Message');
 
 async function getRoomMessages(req, res) {
   const { roomId } = req.params;
-  const messages = await Message.find({ roomId })
+  let messages = await Message.find({ roomId })
     .populate('senderId', 'username role')
     .sort({ timestamp: 1 });
+
+  // If the requester has been kicked from this room, hide their own historical messages
+  if (req.user.kickedFromRooms && req.user.kickedFromRooms.map(id => String(id)).includes(String(roomId))) {
+    messages = messages.filter(m => String(m.senderId._id) !== String(req.user._id));
+  }
+
   return res.json(messages);
 }
 

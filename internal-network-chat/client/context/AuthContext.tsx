@@ -6,6 +6,7 @@ type User = {
   username: string;
   role: 'admin' | 'moderator' | 'user';
   banned: boolean;
+  muted?: boolean;
 } | null;
 
 type AuthContextType = {

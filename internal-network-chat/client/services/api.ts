@@ -70,3 +70,17 @@ export const fetchRecentMessages = async (token: string, limit = 50) => {
   return res.data;
 };
 
+export const requestJoinRoom = async (token: string, roomId: string) => {
+  const res = await api.post(`/rooms/${roomId}/request`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+export const approveJoinRoom = async (token: string, roomId: string, targetUserId: string) => {
+  const res = await api.post(`/rooms/${roomId}/approve`, { targetUserId }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+

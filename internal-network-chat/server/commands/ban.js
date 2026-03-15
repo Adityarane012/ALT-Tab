@@ -16,17 +16,18 @@ module.exports = async function banCommand({ io, socket, args }) {
   const targetRole = target.role;
 
   if (targetRole === ROLES.ADMIN) {
-    socket.emit('banError', { message: 'You cannot ban another admin.' });
+    socket.emit('permissionError', { message: 'You cannot ban another admin.' });
     return;
   }
   
   if (requesterRole === ROLES.MODERATOR && targetRole !== ROLES.USER) {
-    socket.emit('banError', { message: 'Permission denied: Moderators can only ban standard users.' });
+    socket.emit('permissionError', { message: 'Permission denied: Moderators can only ban standard users.' });
     return;
   }
 
   target.banned = true;
   target.bannedBy = socket.user.id;
+  target.bannedByRole = socket.user.role;
   target.bannedAt = new Date();
   await target.save();
 

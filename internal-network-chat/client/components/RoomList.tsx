@@ -3,12 +3,16 @@ import clsx from 'clsx';
 type Room = {
   _id: string;
   name: string;
+  members: string[];
+  pendingMembers: string[];
+  isPrivate: boolean;
 };
 
 type RoomListProps = {
   rooms: Room[];
   activeRoomId: string | null;
   onSelect: (room: Room) => void;
+  currentUserId: string; // Needed to check membership
 };
 
 const ROOM_ICONS: Record<string, string> = {
@@ -33,7 +37,7 @@ function getRoomIcon(name: string): string {
   return '#';
 }
 
-export const RoomList = ({ rooms, activeRoomId, onSelect }: RoomListProps) => {
+export const RoomList = ({ rooms, activeRoomId, onSelect, currentUserId }: RoomListProps) => {
   return (
     <div className="acm-panel h-full flex flex-col">
       {/* Header */}
@@ -58,6 +62,9 @@ export const RoomList = ({ rooms, activeRoomId, onSelect }: RoomListProps) => {
         {rooms.map((room, i) => {
           const isActive = activeRoomId === room._id;
           const icon = getRoomIcon(room.name);
+          const isMember = room.members?.includes(currentUserId);
+          const isLocked = room.isPrivate && !isMember;
+
           return (
             <button
               key={room._id}
@@ -65,7 +72,8 @@ export const RoomList = ({ rooms, activeRoomId, onSelect }: RoomListProps) => {
                 'w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-all duration-200 group relative animate-fade-in',
                 isActive
                   ? 'bg-acmTeal/10 text-acmTeal border-l-2 border-acmTeal'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-l-2 border-transparent'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border-l-2 border-transparent',
+                isLocked && !isActive && 'opacity-60 hover:opacity-100' // visually dim locked rooms
               )}
               style={{ animationDelay: `${i * 30}ms` }}
               onClick={() => onSelect(room)}
@@ -89,7 +97,15 @@ export const RoomList = ({ rooms, activeRoomId, onSelect }: RoomListProps) => {
               )}>
                 {room.name}
               </span>
-              {isActive && (
+              
+              {/* Lock Icon for private unjoined rooms */}
+              {isLocked && (
+                <svg className="ml-auto w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              )}
+
+              {isActive && !isLocked && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-acmTeal animate-pulse" />
               )}
             </button>

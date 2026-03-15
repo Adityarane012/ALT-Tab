@@ -5,16 +5,21 @@ type MessageInputProps = {
   onSend: (content: string) => void;
   onTypingChange: (isTyping: boolean) => void;
   typingUsers: { id: string; username: string }[];
+  isMuted?: boolean;
 };
 
 const SLASH_COMMANDS = [
   { cmd: '/kick', desc: 'Kick a user from the room', usage: '/kick username' },
   { cmd: '/ban', desc: 'Ban a user from the server', usage: '/ban username' },
+  { cmd: '/unban', desc: 'Unban a user from the server', usage: '/unban username' },
+  { cmd: '/mute', desc: 'Mute a user', usage: '/mute username' },
+  { cmd: '/unmute', desc: 'Unmute a user', usage: '/unmute username' },
+  { cmd: '/warn', desc: 'Issue a warning to a user', usage: '/warn username reason' },
   { cmd: '/create-room', desc: 'Create a new channel', usage: '/create-room name' },
   { cmd: '/clear', desc: 'Clear all messages in room', usage: '/clear' },
 ];
 
-export const MessageInput = ({ onSend, onTypingChange, typingUsers }: MessageInputProps) => {
+export const MessageInput = ({ onSend, onTypingChange, typingUsers, isMuted }: MessageInputProps) => {
   const [value, setValue] = useState('');
   const [showCommands, setShowCommands] = useState(false);
   const [filteredCmds, setFilteredCmds] = useState(SLASH_COMMANDS);
@@ -115,12 +120,15 @@ export const MessageInput = ({ onSend, onTypingChange, typingUsers }: MessageInp
       )}
 
       {/* Input area */}
-      <div className="acm-panel p-1 flex items-end gap-1 transition-all duration-200 focus-within:border-acmTeal/40 focus-within:shadow-glow-teal">
+      <div className={`acm-panel p-1 flex items-end gap-1 transition-all duration-200 ${
+        isMuted ? 'opacity-50 cursor-not-allowed bg-red-900/10 border-red-500/20' : 'focus-within:border-acmTeal/40 focus-within:shadow-glow-teal'
+      }`}>
         <textarea
           ref={textareaRef}
-          className="flex-1 bg-transparent resize-none outline-none text-sm px-3 py-2.5 text-slate-200 placeholder-slate-500 min-h-[40px] max-h-[120px]"
+          disabled={isMuted}
+          className="flex-1 bg-transparent resize-none outline-none text-sm px-3 py-2.5 text-slate-200 placeholder-slate-500 min-h-[40px] max-h-[120px] disabled:cursor-not-allowed"
           rows={1}
-          placeholder="Type a message or / for commands..."
+          placeholder={isMuted ? "You are muted and cannot send messages." : "Type a message or / for commands..."}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -135,8 +143,11 @@ export const MessageInput = ({ onSend, onTypingChange, typingUsers }: MessageInp
           {/* Send button */}
           <button
             onClick={handleSend}
-            disabled={!value.trim()}
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gradient-to-r from-acmBlue via-acmPurple to-acmTeal text-white shadow-lg shadow-acmPurple/20 hover:shadow-acmPurple/40 active:scale-95"
+            disabled={!value.trim() || isMuted}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 
+              disabled:opacity-30 disabled:cursor-not-allowed 
+              ${isMuted ? 'bg-slate-800 text-slate-600' : 'bg-gradient-to-r from-acmBlue via-acmPurple to-acmTeal text-white shadow-lg shadow-acmPurple/20 hover:shadow-acmPurple/40 active:scale-95'}
+            `}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />

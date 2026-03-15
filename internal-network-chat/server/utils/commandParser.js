@@ -1,6 +1,10 @@
 const { ROLES } = require('../middleware/authMiddleware');
 const kick = require('../commands/kick');
 const ban = require('../commands/ban');
+const unban = require('../commands/unban');
+const mute = require('../commands/mute');
+const unmute = require('../commands/unmute');
+const warn = require('../commands/warn');
 const clear = require('../commands/clear');
 const createRoom = require('../commands/createRoom');
 
@@ -11,7 +15,23 @@ const COMMANDS = {
   },
   ban: {
     fn: ban,
-    roles: [ROLES.ADMIN]
+    roles: [ROLES.ADMIN, ROLES.MODERATOR]
+  },
+  unban: {
+    fn: unban,
+    roles: [ROLES.ADMIN, ROLES.MODERATOR]
+  },
+  mute: {
+    fn: mute,
+    roles: [ROLES.ADMIN, ROLES.MODERATOR]
+  },
+  unmute: {
+    fn: unmute,
+    roles: [ROLES.ADMIN, ROLES.MODERATOR]
+  },
+  warn: {
+    fn: warn,
+    roles: [ROLES.ADMIN, ROLES.MODERATOR]
   },
   clear: {
     fn: clear,

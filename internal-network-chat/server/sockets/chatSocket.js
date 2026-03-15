@@ -1,5 +1,6 @@
 const Message = require('../models/Message');
 const Room = require('../models/Room');
+const { User } = require('../models/User');
 const { handleCommand } = require('../utils/commandParser');
 
 function attachSocketHandlers(io, socket) {
@@ -31,6 +32,14 @@ function attachSocketHandlers(io, socket) {
 
   socket.on('sendMessage', async ({ roomId, content }) => {
     if (!content || !roomId) return;
+
+    // Check mute status dynamically
+    const dbUser = await User.findById(socket.user.id);
+    if (!dbUser) return;
+    if (dbUser.muted) {
+      socket.emit('muteError', { message: 'You are muted and cannot send messages.' });
+      return;
+    }
 
     const handled = await handleCommand({ io, socket, roomId, content });
     if (handled) return;

@@ -1,25 +1,43 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { fetchRoomMessages } from '../services/api';
+import { fetchRoomMessages, requestJoinRoom, approveJoinRoom } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Message } from './Message';
 import { MessageInput } from './MessageInput';
 import { ErrorModal } from './ErrorModal';
+import { useRouter } from 'next/router';
+
+type RoomType = {
+  _id: string;
+  name: string;
+  members?: string[];
+  pendingMembers?: string[];
+  isPrivate?: boolean;
+};
 
 type ChatWindowProps = {
-  room: { _id: string; name: string } | null;
+  room: RoomType | null;
 };
 
 export const ChatWindow = ({ room }: ChatWindowProps) => {
   const { socket } = useSocket();
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [typingUsers, setTypingUsers] = useState<{ id: string; username: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [banErrorMsg, setBanErrorMsg] = useState('');
+  const [warningMsg, setWarningMsg] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [joinRequested, setJoinRequested] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Check Membership
+  const isMember = room && currentUser && room.members?.includes(currentUser.id);
+  const isPending = room && currentUser && room.pendingMembers?.includes(currentUser.id);
+  const isLockedOut = room?.isPrivate && !isMember;
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
@@ -28,7 +46,10 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
   };
 
   useEffect(() => {
-    if (!room || !socket) return;
+    // Reset local state when switching rooms
+    setJoinRequested(false);
+
+    if (!room || !socket || isLockedOut) return;
 
     socket.emit('joinRoom', { roomId: room._id });
     const load = async () => {
@@ -49,6 +70,11 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
       setTimeout(() => scrollToBottom(false), 50);
     };
     load();
+
+    // Synchronize initial mute state from AuthContext
+    if (currentUser && currentUser.muted !== undefined) {
+      setIsMuted(currentUser.muted);
+    }
 
     const onReceive = (msg: any) => {
       if (msg.roomId === room._id) {
@@ -99,8 +125,42 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
         )
       );
     };
-    const onBanError = (payload: any) => {
+    const onPermissionError = (payload: any) => {
       setBanErrorMsg(payload.message || 'Action Not Allowed');
+    };
+    const onUserMuted = (payload: any) => {
+      if (currentUser && payload.username === currentUser.username) {
+        setIsMuted(true);
+      }
+    };
+    const onUserUnmuted = (payload: any) => {
+      if (currentUser && payload.username === currentUser.username) {
+        setIsMuted(false);
+        setBanErrorMsg(''); // Clear error if they were staring at a mute error
+      }
+    };
+    const onUserUnbanned = (payload: any) => {
+      if (currentUser && payload.username === currentUser.username) {
+        // Just in case we need to reset any states
+      }
+    };
+    const onMuteError = (payload: any) => {
+      setBanErrorMsg(payload.message || 'You are muted and cannot send messages.');
+    };
+    const onKicked = (payload: any) => {
+      if (payload.roomId === room._id) {
+        setWarningMsg('You were removed from this room by a moderator.');
+        router.push('/dashboard');
+      }
+    };
+    const onWarned = (payload: any) => {
+      setWarningMsg(payload.message || 'You have received a warning.');
+    };
+    const onJoinApproved = (payload: any) => {
+      if (payload.roomId === room?._id) {
+         // Auto-reload the UI window to drop the gate
+         window.location.reload();
+      }
     };
 
     socket.on('receiveMessage', onReceive);
@@ -108,7 +168,14 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     socket.on('clearMessages', onClear);
     socket.on('typing', onTyping);
     socket.on('reaction', onReaction);
-    socket.on('banError', onBanError);
+    socket.on('permissionError', onPermissionError);
+    socket.on('userMuted', onUserMuted);
+    socket.on('userUnmuted', onUserUnmuted);
+    socket.on('userUnbanned', onUserUnbanned);
+    socket.on('muteError', onMuteError);
+    socket.on('kickedFromRoom', onKicked);
+    socket.on('userWarned', onWarned);
+    socket.on('joinApproved', onJoinApproved);
 
     return () => {
       socket.emit('leaveRoom', { roomId: room._id });
@@ -117,9 +184,16 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
       socket.off('clearMessages', onClear);
       socket.off('typing', onTyping);
       socket.off('reaction', onReaction);
-      socket.off('banError', onBanError);
+      socket.off('permissionError', onPermissionError);
+      socket.off('userMuted', onUserMuted);
+      socket.off('userUnmuted', onUserUnmuted);
+      socket.off('userUnbanned', onUserUnbanned);
+      socket.off('muteError', onMuteError);
+      socket.off('kickedFromRoom', onKicked);
+      socket.off('userWarned', onWarned);
+      socket.off('joinApproved', onJoinApproved);
     };
-  }, [room?._id, socket, token]);
+  }, [room?._id, socket, token, currentUser, router, isLockedOut]);
 
   // Scroll detection
   const handleScroll = () => {
@@ -144,6 +218,26 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     socket.emit('reaction', { messageId, emoji, roomId: room._id });
   };
 
+  const handleRequestJoin = async () => {
+    if (!room || !token) return;
+    try {
+      await requestJoinRoom(token, room._id);
+      setJoinRequested(true);
+    } catch (err: any) {
+      setBanErrorMsg(err.response?.data?.message || 'Failed to request join');
+    }
+  };
+
+  const handleApproveJoin = async (targetId: string) => {
+    if (!room || !token) return;
+    try {
+      await approveJoinRoom(token, room._id, targetId);
+      setWarningMsg('User approved for entry.'); // use warning UI as success for now
+    } catch (err: any) {
+      setBanErrorMsg(err.response?.data?.message || 'Failed to approve');
+    }
+  };
+
   // No room selected state
   if (!room) {
     return (
@@ -161,12 +255,50 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
     );
   }
 
+  // Private Room Lock State
+  if (isLockedOut) {
+    return (
+      <div className="acm-panel h-full flex items-center justify-center relative">
+        <div className="text-center animate-fade-in max-w-sm px-6">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-[2rem] bg-gradient-to-br from-slate-800 to-acmDark border-[3px] border-slate-700/50 shadow-2xl flex items-center justify-center relative overflow-hidden">
+             {/* Glow effect behind lock */}
+            <div className="absolute inset-0 bg-acmPurple/20 blur-xl rounded-full" />
+            <svg className="w-10 h-10 text-acmPurple relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </div>
+          
+          <h3 className="text-xl font-bold text-slate-100 mb-2 tracking-tight">Private Channel</h3>
+          <p className="text-sm text-slate-400 mb-8 leading-relaxed">
+            You need to be a member to see the messages in <span className="font-semibold text-acmTeal">#{room.name}</span>.
+          </p>
+
+          <button
+            onClick={handleRequestJoin}
+            disabled={isPending || joinRequested}
+            className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all duration-300 shadow-glass ${
+              isPending || joinRequested 
+              ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+              : 'bg-gradient-to-r from-acmBlue via-acmPurple to-acmTeal text-white hover:opacity-90 active:scale-95'
+            }`}
+          >
+            {isPending || joinRequested ? 'Request Pending...' : 'Request to Join'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <ErrorModal 
-        isOpen={!!banErrorMsg} 
-        message={banErrorMsg} 
-        onClose={() => setBanErrorMsg('')} 
+        isOpen={!!banErrorMsg || !!warningMsg} 
+        onClose={() => {
+          setBanErrorMsg('');
+          setWarningMsg('');
+        }} 
+        title={warningMsg ? 'Warning' : 'Action Failed'} 
+        message={banErrorMsg || warningMsg} 
       />
       
       <div className="acm-panel h-full flex flex-col">
@@ -190,6 +322,31 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
           <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Live</span>
         </div>
       </div>
+
+      {/* Admin Panel: Pending Members */}
+      {currentUser && ['admin', 'moderator'].includes(currentUser.role) && room.pendingMembers && room.pendingMembers.length > 0 && (
+         <div className="bg-acmPurple/10 border-b border-acmPurple/30 px-5 py-2.5 flex items-center justify-between animate-fade-in shadow-inner">
+            <div className="flex items-center gap-2">
+               <span className="w-4 h-4 rounded bg-acmPurple/20 text-acmPurple flex items-center justify-center text-[10px] font-bold">
+                  !
+               </span>
+               <span className="text-xs text-slate-200 font-medium">Pending Join Requests ({room.pendingMembers.length})</span>
+            </div>
+            
+            <div className="flex items-center gap-2 max-w-[50%] overflow-x-auto">
+               {room.pendingMembers.map((id) => (
+                  <button
+                     key={id}
+                     onClick={() => handleApproveJoin(id)}
+                     className="text-[10px] bg-slate-800 border border-acmPurple/40 text-slate-300 px-2 py-1 rounded truncate hover:bg-acmPurple/20 hover:text-white transition-all max-w-[100px]"
+                     title={`Approve ${id}`}
+                  >
+                     Approve {id.slice(-4)}
+                  </button>
+               ))}
+            </div>
+         </div>
+      )}
 
       {/* Messages */}
       <div
@@ -256,6 +413,7 @@ export const ChatWindow = ({ room }: ChatWindowProps) => {
           onSend={handleSend}
           onTypingChange={handleTypingChange}
           typingUsers={typingUsers}
+          isMuted={isMuted}
         />
       </div>
       </div>
